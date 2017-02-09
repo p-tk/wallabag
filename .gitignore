@@ -1,3 +1,6 @@
+# Vim
+*.swp
+*.swo
 # Cache, logs & sessions
 /var/*
 !/var/cache
