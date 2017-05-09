@@ -7,13 +7,14 @@
                 <ul class="collection">
                     <li class="collection-item avatar">
                         {% if client.image %}
-                        <img src="{{ asset('assets/appicons/' ~ client.image) }}" alt="Client icon" class="circle">
+                        <img src="{{ client.image }}" alt="Client icon" class="circle">
                         {% endif %}
                         <span class="title">{{ client.name }}</span>
                         <p>{{ client.description }}</p>
                     </li>
                 </ul>
-            {% set scopes = app.request.get('scope') | split(' ') %}
+            {% set scopes = form.scope.vars.value | split(' ') %}
+            {# TODO : Fix me when https://github.com/FriendsOfSymfony/FOSOAuthServerBundle/issues/309 is ok #}
             <ul class="collapsible col s12 m12 l6 offset-l3" data-collapsible="accordion">
                 {% for scope in scopes %}
                     {% if scope == 'read' %}

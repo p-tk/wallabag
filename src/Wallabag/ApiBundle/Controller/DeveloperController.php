@@ -2,13 +2,13 @@
 
 namespace Wallabag\ApiBundle\Controller;
 
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Wallabag\ApiBundle\Entity\Client;
 use Wallabag\ApiBundle\Form\Type\ClientType;
-use Wallabag\ApiBundle\Form\Type\GlobalClientType;
 
 class DeveloperController extends Controller
 {
@@ -35,50 +35,68 @@ class DeveloperController extends Controller
      *
      * @param Request $request
      *
-     * @Route("/developer/client/global/create", name="developer_create_global_client")
+     * @Route("/api/apps", name="create_app")
+     * @Method("POST")
      *
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function createGlobalClientAction(Request $request)
+    public function createAppAction(Request $request)
     {
         $em = $this->getDoctrine()->getManager();
-        $client = new Client();
-        $clientForm = $this->createForm(GlobalClientType::class, $client);
-        $clientForm->handleRequest($request);
 
-        if ($clientForm->isSubmitted() && $clientForm->isValid()) {
+        $clientName = $request->request->get('client_name');
+        $redirectURIs = $request->request->get('redirect_uris');
+        $logoURI = $request->request->get('logo_uri');
+        $description = $request->request->get('description');
+        $appURI = $request->request->get('app_uri');
 
-            /** Handling the application icon */
-            $file = $client->getImage();
-            $fileName = md5(uniqid('', true)).'.'.$file->guessExtension();
-
-            $file->move(
-                $this->getParameter('wallabag_api.applications_icon_path'),
-                $fileName
-            );
-
-            $client->setImage($fileName);
-
-
-            $client->setAllowedGrantTypes(['token', 'authorization_code', 'refresh_token']);
-            $em->persist($client);
-            $em->flush();
-
-            $this->get('session')->getFlashBag()->add(
-                'notice',
-                $this->get('translator')->trans('flashes.developer.notice.client_created', ['%name%' => $client->getName()])
-            );
-
-            return $this->render('@WallabagCore/themes/common/Developer/client_parameters.html.twig', [
-                'client_id' => $client->getPublicId(),
-                'client_secret' => $client->getSecret(),
-                'client_name' => $client->getName(),
-            ]);
+        if (!$clientName) {
+            return new JsonResponse([
+                'error' => 'invalid_client_name',
+                'error_description' => 'The client name cannot be empty',
+            ], 400);
         }
 
-        return $this->render('@WallabagCore/themes/common/Developer/global_client.html.twig', [
-            'form' => $clientForm->createView(),
-        ]);
+        if (!$redirectURIs) {
+            return new JsonResponse([
+                'error' => 'invalid_redirect_uri',
+                'error_description' => 'One or more redirect_uri values are invalid',
+            ], 400);
+        }
+
+        $redirectURIs = (array) $redirectURIs;
+
+        $client = new Client();
+
+        $client->setName($clientName);
+
+        $client->setDescription($description);
+
+        $client->setRedirectUris($redirectURIs);
+
+        $client->setImage($logoURI);
+        $client->setAppUrl($appURI);
+
+        $client->setAllowedGrantTypes(['token', 'refresh_token', 'authorization_code']);
+        $em->persist($client);
+        $em->flush();
+
+        $this->get('session')->getFlashBag()->add(
+            'notice',
+            $this->get('translator')->trans('flashes.developer.notice.client_created', ['%name%' => $client->getName()])
+        );
+
+
+
+        return new JsonResponse([
+            'client_id' => $client->getPublicId(),
+            'client_secret' => $client->getSecret(),
+            'client_name' => $client->getName(),
+            'redirect_uri' => $client->getRedirectUris(),
+            'description' => $client->getDescription(),
+            'logo_uri' => $client->getImage(),
+            'app_uri' => $client->getAppUrl(),
+        ], 201);
     }
 
     /**

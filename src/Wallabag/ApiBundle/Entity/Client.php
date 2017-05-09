@@ -45,12 +45,6 @@ class Client extends BaseClient
 
     /**
      * @ORM\Column(type="string", nullable=true)
-     * @Assert\File(
-     *     maxSize = "5M",
-     *     mimeTypes = {"image/jpeg", "image/gif", "image/png", "image/tiff"},
-     *     maxSizeMessage = "The maximum allowed file size is 5MB.",
-     *     mimeTypesMessage = "Only the filetypes image are allowed."
-     * )
      */
     private $image;
 
@@ -58,6 +52,11 @@ class Client extends BaseClient
      * @ORM\Column(type="string", nullable=true)
      */
     private $description;
+
+    /**
+     * @ORM\Column(type="string", nullable=true)
+     */
+    private $appUrl;
 
     /**
      * Client constructor.
@@ -131,5 +130,21 @@ class Client extends BaseClient
     public function setDescription($description)
     {
         $this->description = $description;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAppUrl()
+    {
+        return $this->appUrl;
+    }
+
+    /**
+     * @param string $appUrl
+     */
+    public function setAppUrl($appUrl)
+    {
+        $this->appUrl = $appUrl;
     }
 }
