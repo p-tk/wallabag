@@ -227,8 +227,8 @@ fos_oauth_server:
     service:
         user_provider: fos_user.user_provider.username_email
         options:
-            access_token_lifetime: 5184000
-            refresh_token_lifetime: 31536000
+            access_token_lifetime: 31536000
+            refresh_token_lifetime: 63072000
             supported_scopes: read write user
             enforce_state: true
             auth_code_lifetime: 60
