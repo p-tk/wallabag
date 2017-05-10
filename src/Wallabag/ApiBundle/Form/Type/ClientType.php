@@ -15,8 +15,8 @@ class ClientType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-            ->add('name', TextType::class, ['label' => 'developer.client.form.name_label'])
-            ->add('save', SubmitType::class, ['label' => 'developer.client.form.save_label'])
+            ->add('name', TextType::class, ['label' => 'apps.old_client.form.name_label'])
+            ->add('save', SubmitType::class, ['label' => 'apps.old_client.form.save_label'])
         ;
     }
 

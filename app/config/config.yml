@@ -68,9 +68,6 @@ wallabag_import:
     allow_mimetypes: ['application/octet-stream', 'application/json', 'text/plain', 'text/csv']
     resource_dir: "%kernel.root_dir%/../web/uploads/import"
 
-wallabag_api:
-    applications_icon_path: "%kernel.root_dir%/../web/assets/appicons"
-
 # Twig Configuration
 twig:
     debug: "%kernel.debug%"
@@ -230,7 +227,8 @@ fos_oauth_server:
     service:
         user_provider: fos_user.user_provider.username_email
         options:
-            refresh_token_lifetime: 1209600
+            access_token_lifetime: 5184000
+            refresh_token_lifetime: false
             supported_scopes: read write user
             enforce_state: true
 

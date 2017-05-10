@@ -59,6 +59,11 @@ class Client extends BaseClient
     private $appUrl;
 
     /**
+     * @ORM\Column(type="datetime", nullable=true)
+     */
+    private $createdAt;
+
+    /**
      * Client constructor.
      * @param User|null $user
      */
@@ -66,6 +71,7 @@ class Client extends BaseClient
     {
         parent::__construct();
         $this->user = $user;
+        $this->createdAt = new \DateTime();
     }
 
     /**
@@ -146,5 +152,13 @@ class Client extends BaseClient
     public function setAppUrl($appUrl)
     {
         $this->appUrl = $appUrl;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getCreatedAt()
+    {
+        return $this->createdAt;
     }
 }

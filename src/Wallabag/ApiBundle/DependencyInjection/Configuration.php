@@ -20,12 +20,6 @@ class Configuration implements ConfigurationInterface
         $treeBuilder = new TreeBuilder();
         $rootNode = $treeBuilder->root('wallabag_api');
 
-        $rootNode
-            ->children()
-                ->scalarNode('applications_icon_path')->end()
-            ->end()
-        ;
-
         return $treeBuilder;
     }
 }
