@@ -3,77 +3,65 @@ Documentation de l'API
 
 Grâce à cette documentation, nous allons voir comment interagir avec l'API de wallabag.
 
+Il y a deux types de clients API : ceux créés par l'utilisateur pour leur seule utilisation et ceux créés par l'administrateur du serveur pour tous ses utilisateurs pour qu'ils puissent se connecter facilement et automatiquement.
+
 Pré-requis
 ----------
 
 * wallabag fraichement installé et disponible à http://localhost:8000
 * ``httpie`` installé sur votre ordinateur (`voir le site du projet <https://github.com/jkbrzt/httpie>`__). Vous pouvez également adapter les commandes en utilisant curl ou wget.
-* toutes les méthodes de l'API documentées ici http://localhost:8000/api/doc
-
-Créer un nouveau client d'API
------------------------------
-
-Depuis votre wallabag, vous pouvez créer un nouveau client d'API à cette URL http://localhost:8000/developer/client/create.
-
-Vous devez renseigner l'URL de redirection de votre application et créer votre client. Si votre application est une application desktop, renseignez l'URL que vous souhaitez.
-
-Vous obtiendrez les informations suivantes :
-
-::
-
-    Client ID:
-
-    1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc
-
-    Client secret:
-
-    636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4
+* les méthodes de l'API documentées ici http://localhost:8000/api/doc
+* connaissances du protocole oAuth2
 
 
-Créer un jeton
---------------
+Créer une nouvelle application
+------------------------------
+Pour créer une nouvelle application, vous devez faire une requête POST à `/api/apps` avec les paramètres suivants :
 
-Pour chaque appel d'API, vous aurez besoin d'un jeton. Créons-le avec la commande suivante (remplacez ``client_id``, ``client_secret``, ``username`` and ``password`` par leur valeur):
+* `client_name`: **REQUIS** le nom du client, typiquement le nom de votre application qui sera affiché à l'utilisateur
+* `redirect_uri`: **REQUIS** toutes les URIs de redirection qui seront utilisées au cours du processus d'authentification
+* `logo_uri`: Une URL pointant sur une image du logo de votre application
+* `description`: Une courte description pour votre application qui sera affichée à l'utlisateur
+* `app_uri`: Une URL pour votre application, page d'accueil ou système de support...
 
-::
+Il est retourné entre autres un `client_id` et un `client_secret` qui seront utilisés ensuite.
 
-    http POST http://localhost:8000/oauth/v2/token \
-        grant_type=password \
-        client_id=1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc \
-        client_secret=636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4 \
-        username=wallabag \
-        password=wallabag
+À partir d'ici la procédure diffère si vous utilisez une application côté serveur ou bien une application côté client. La chaine `client_secret` est en effet *secrète* et ne devrait pas être accessible sur l'appareil d'un utilisateur. En conséquence, les jetons `refresh_token` pour obtenir de nouveaux jetons d'accès lorsque les anciens ont expiré ne sont pas disponibles pour les applications clientes, qui devront permettre à l'utilisateur de s'identifier à nouveau lorsque les jetons d'identification auront expiré.
 
-Vous obtiendrez :
+Application Serveur
+-------------------
+Les applications doivent tout d'abord rediriger l'utilisateur vers `https://wallabag.tld/oauth/v2/auth` avec les paramètres suivants :
 
-::
+* `client_id`: la valeur donnée lors de l'enregistrement de l'application
+* `redirect_uri`: l'URI (schemes autorisés !) vers laquelle rediriger après que l'authorisation a été donnée
+* `response_type`: `code`
+* `state`: Une chaine de caractères aléatoire, par exemple encodée en base64 qui sera retounée par le serveur pour se prémunir pour les attaques XSRF
+* `scope`: Les droits que demande votre application. Il existe read, write et user (ref #3065)
 
-    HTTP/1.1 200 OK
-    Cache-Control: no-store, private
-    Connection: close
-    Content-Type: application/json
-    Date: Tue, 05 Apr 2016 08:44:33 GMT
-    Host: localhost:8000
-    Pragma: no-cache
-    X-Debug-Token: 19c8e0
-    X-Debug-Token-Link: /_profiler/19c8e0
-    X-Powered-By: PHP/7.0.4
+wallabag affiche alors (après identification si nécessaire) une page demandant à l'utilisateur d'autoriser l'application et le redirige ensuite vers l'URI de redirection avec comme paramètre un code.
 
-    {
-        "access_token": "ZGJmNTA2MDdmYTdmNWFiZjcxOWY3MWYyYzkyZDdlNWIzOTU4NWY3NTU1MDFjOTdhMTk2MGI3YjY1ZmI2NzM5MA",
-        "expires_in": 3600,
-        "refresh_token": "OTNlZGE5OTJjNWQwYzc2NDI5ZGE5MDg3ZTNjNmNkYTY0ZWZhZDVhNDBkZTc1ZTNiMmQ0MjQ0OThlNTFjNTQyMQ",
-        "scope": null,
-        "token_type": "bearer"
-    }
+L'application doit maintenant appeler l'URL `https://wallabag.tld/oauth/v2/token` avec les paramètres suivants :
 
-Nous allons utiliser la valeur de ``access_token`` dans nos prochains appels.
+* `code`: Le code récupéré à l'étape précédente
+* `client_id`: L'id du client obtenu à la création de l'application
+* `redirect_uri`: L'URI de redirection finale
+* `grant_type`: Mettre `authorization_code`
 
-Exemple cURL :
+L'URI de redirection finale est alors appelée avec le jeton d'accès `access_token`, sa date d'expiration `expires_in` et un jeton spécial pour récupérer de nouveaux jetons d'accès lorsque ceux-ci expirent nommé `refresh_token` comme paramètres.
 
-::
+Application Client
+------------------
 
-    curl -s "https://localhost:8000/oauth/v2/token?grant_type=password&client_id=1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc&client_secret=636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4&username=wallabag&password=wallabag"
+Les applications doivent tout d'abord rediriger l'utilisateur vers `https://wallabag.tld/oauth/v2/auth` avec les paramètres suivants :
+
+* `client_id`: la valeur donnée lors de l'enregistrement de l'application
+* `redirect_uri`: l'URI (schemes autorisés !) vers laquelle rediriger après que l'authorisation a été donnée
+* `response_type`: `token`
+* `state`: Une chaine de caractères aléatoire, par exemple encodée en base64 qui sera retounée par le serveur pour se prémunir pour les attaques XSRF
+* `scope`: Les droits que demande votre application. Il existe read, write et user (ref #3065)
+
+L'URI de redirection sera appelée avec le jeton d'accès `access_token` et sa date d'expiration `expires_in` en paramètres. Les applications clientes ne peuvent pas obtenir un jeton `refresh_token` pour récupérer de nouveaux jetons d'accès, ils doivent authentifier l'utilisateur à nouveau lorsque le jeton d'accès a expiré.
+
 
 Récupérer les articles existants
 --------------------------------
@@ -257,6 +245,71 @@ Autres méthodes
 Nous n'écrirons pas d'exemples pour toutes les méthodes de l'API.
 
 Jetez un œil à la liste complète ici http://localhost:8000/api/doc pour connaitre chaque méthode.
+
+
+Créer un nouveau client d'API (déprécié)
+----------------------------------------
+
+Depuis votre wallabag, vous pouvez créer un nouveau client d'API en vous rendant dans la section « Gestion des clients API » dans le menu principal.
+
+Vous devez juste nommer votre client et confirmer sa création.
+
+Vous obtiendrez les informations suivantes :
+
+::
+
+    Client ID:
+
+    1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc
+
+    Client secret:
+
+    636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4
+
+Vous pouvez copier/coller ces informations dans votre application.
+
+Créer un jeton (déprécié)
+-------------------------
+
+Pour chaque appel d'API, vous aurez besoin d'un jeton. Créons-le avec la commande suivante (remplacez ``client_id``, ``client_secret`` par leur valeur):
+
+::
+
+    http POST http://localhost:8000/oauth/v2/token \
+        grant_type=client_credentials \
+        client_id=1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc \
+        client_secret=636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4 \
+
+Vous obtiendrez :
+
+::
+
+    HTTP/1.1 200 OK
+    Cache-Control: no-store, private
+    Connection: close
+    Content-Type: application/json
+    Date: Tue, 05 Apr 2016 08:44:33 GMT
+    Host: localhost:8000
+    Pragma: no-cache
+    X-Debug-Token: 19c8e0
+    X-Debug-Token-Link: /_profiler/19c8e0
+    X-Powered-By: PHP/7.0.4
+
+    {
+        "access_token": "ZGJmNTA2MDdmYTdmNWFiZjcxOWY3MWYyYzkyZDdlNWIzOTU4NWY3NTU1MDFjOTdhMTk2MGI3YjY1ZmI2NzM5MA",
+        "expires_in": 3600,
+        "refresh_token": "OTNlZGE5OTJjNWQwYzc2NDI5ZGE5MDg3ZTNjNmNkYTY0ZWZhZDVhNDBkZTc1ZTNiMmQ0MjQ0OThlNTFjNTQyMQ",
+        "scope": null,
+        "token_type": "bearer"
+    }
+
+Nous allons utiliser la valeur de ``access_token`` dans nos prochains appels.
+
+Exemple cURL :
+
+::
+
+    curl -s "https://localhost:8000/oauth/v2/token?grant_type=client_credentials&client_id=1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc&client_secret=636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4"
 
 Ressources tierces
 ------------------

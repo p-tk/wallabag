@@ -3,77 +3,77 @@ API documentation
 
 Thanks to this documentation, we'll see how to interact with the wallabag API.
 
+There are two types of API clients : the ones created by the users for their own use and the ones created by the server admin for all of it's users so that they can connect automatically and smoothly.
+
 Requirements
 ------------
 
 * wallabag freshly (or not) installed on http://localhost:8000
 * ``httpie`` installed on your computer (`see project website <https://github.com/jkbrzt/httpie>`__). Note that you can also adapt the commands using curl or wget.
 * all the API methods are documented here http://localhost:8000/api/doc (on your instance) and `on our example instance <http://v2.wallabag.org/api/doc>`_
+* Knowledge of oAuth 2 flows
 
-Creating a new API client
+Register a new app
+------------------
+
+To register a new app, you just need to do a POST request at `/api/apps` with the following parameters :
+
+* `client_name`: **REQUIRED** the client name, typically your app name, that will be shown to the user
+* `redirect_uri`: **REQUIRED** all the redirect URIs used through the auth process
+* `logo_uri`: An URL for your logo that will be displayed on the allow page
+* `description`: A short description for your app that will be displayed at the user
+* `app_uri`: An URL for your app, it's homepage or help section...
+
+It returns (among other things) a `client_id` and `client_secret` that will be used afterwards.
+
+From here the process differs if you're using a server-side app or a client-side app. The `client_secret` is indeed *secret* and shouldn't be accessible on the device of an user. As consequence, `refresh_token`s are not available for client-side apps, which will need the user to login again after the `access_token` has expired.
+
+Server app
+----------
+Applications first call `https://wallabag.tld/oauth/v2/auth` with the following parameters :
+
+* `client_id`: the one returned at the app creation
+* `redirect_uri`: the uri (schemes allowed !) to redirect after authorization is made, read below)
+* `response_type`: `code`
+* `state`: A random string (for instance base64 encoded) that will be returned by the server to check against XSRF
+* `scope`: The rights your app requires. There is read, write and user (ref #3065)
+
+
+Then, wallabag promps a page (after login if needed) asking the user to allow the app and then redirects to the redirect_uri with a code as parameter.
+The app now calls `https://wallabag.tld/oauth/v2/auth` with the following parameters :
+
+* `code`: the code you just got
+* `client_id`: the client id, same as before
+* `redirect_uri`: the final redirect uri
+* `grant_type`: `authorization_code`
+
+The redirect_uri is finally called with the access_token (and refresh_token and others like before...) as parameter.
+
+Client app
+----------
+Applications first call `https://wallabag.tld/oauth/v2/auth` with the following parameters :
+
+* `client_id`: the one the instance administrator gave
+* `redirect_uri`: the uri (schemes allowed !) to redirect after authorization is made, read below)
+* `response_type`: `token`
+* `state`: A random string (for instance base64 encoded) that will be returned by the server to check against XSRF
+* `scope`: There is read, write and user (ref #3065)
+
+The redirect_uri defined is called with the access_token as parameter. Clients apps can't get a refresh token, they need to authenticate the user again when the access_token has expired.
+
+
+Refresh your access token
 -------------------------
 
-In your wallabag account, you can create a new API client at this URL http://localhost:8000/developer/client/create.
-
-Just give the redirect URL of your application and create your client. If your application is a desktop one, put whatever URL suits you the most.
-
-You get information like this:
+You'll need the `refresh_token` that you'll created earlier, and the `client_id` and `client_secret` provided when the app was created.
 
 ::
 
-    Client ID:
-
-    1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc
-
-    Client secret:
-
-    636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4
-
-
-Obtaining a refresh token
--------------------------
-
-For each API call, you'll need a token. Let's create it with this command (replace ``client_id``, ``client_secret``, ``username`` and ``password`` with their values):
-
-::
-
-    http POST http://localhost:8000/oauth/v2/token \
-        grant_type=password \
-        client_id=1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc \
-        client_secret=636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4 \
-        username=wallabag \
-        password=wallabag
-
-You'll have this in return:
-
-::
-
-    HTTP/1.1 200 OK
-    Cache-Control: no-store, private
-    Connection: close
-    Content-Type: application/json
-    Date: Tue, 05 Apr 2016 08:44:33 GMT
-    Host: localhost:8000
-    Pragma: no-cache
-    X-Debug-Token: 19c8e0
-    X-Debug-Token-Link: /_profiler/19c8e0
-    X-Powered-By: PHP/7.0.4
-
-    {
-        "access_token": "ZGJmNTA2MDdmYTdmNWFiZjcxOWY3MWYyYzkyZDdlNWIzOTU4NWY3NTU1MDFjOTdhMTk2MGI3YjY1ZmI2NzM5MA",
-        "expires_in": 3600,
-        "refresh_token": "OTNlZGE5OTJjNWQwYzc2NDI5ZGE5MDg3ZTNjNmNkYTY0ZWZhZDVhNDBkZTc1ZTNiMmQ0MjQ0OThlNTFjNTQyMQ",
-        "scope": null,
-        "token_type": "bearer"
-    }
-
-We'll work with the ``access_token`` value in our next calls.
-
-cURL example:
-
-::
-
-    curl -s "https://localhost:8000/oauth/v2/token?grant_type=password&client_id=1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc&client_secret=636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4&username=wallabag&password=wallabag"
+    http POST http://127.0.0.1:8000/oauth/v2/token \
+    grant_type=refresh_token \
+    refresh_token=N2M2YTg2NDE3ZTQyNTZmMzQ0NmZkZmI3OTRlNjg5N2JiOTljMTkyMzFkZWYwZjMxNTJmNGFhYjA3MjFhMGEzYQ \
+    client_id=1_60a2o9salk8480wkgggoks0k04ko0ck8csw8gw0woc80sckwgw \
+    client_secret=1bnyka2tk90k84ss8sgws4ok8ss04gokc4sc8oscs4gc84go44
 
 Getting existing entries
 ------------------------
@@ -251,6 +251,7 @@ cURL example:
 
     curl --request DELETE "https://localhost:8000/api/entries/1.html?access_token=ZGJmNTA2MDdmYTdmNWFiZjcxOWY3MWYyYzkyZDdlNWIzOTU4NWY3NTU1MDFjOTdhMTk2MGI3YjY1ZmI2NzM5MA"
 
+
 Other methods
 -------------
 
@@ -258,8 +259,74 @@ We won't write samples for each API method.
 
 Have a look on the listing here: http://localhost:8000/api/doc to know each method.
 
+Creating a new API client (depreciated)
+---------------------------------------
+
+In your wallabag account, you can create a new API client by going to the *API clients management* section in the sidebar.
+
+You just need give a name to name your client, then confirm it's creation.
+
+You get information like this:
+
+::
+
+    Client ID:
+
+    1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc
+
+    Client secret:
+
+    636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4
+
+These can be used like this :
+
+Using clients (depreciated)
+---------------------------
+
+For each API call, you'll need a token. Let's create it with this command (replace ``client_id`` and``client_secret`` with their values):
+
+::
+
+    http POST http://localhost:8000/oauth/v2/token \
+        grant_type=client_credentials \
+        client_id=1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc \
+        client_secret=636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4 \
+
+You'll have this in return:
+
+::
+
+    HTTP/1.1 200 OK
+    Cache-Control: no-store, private
+    Connection: close
+    Content-Type: application/json
+    Date: Tue, 05 Apr 2016 08:44:33 GMT
+    Host: localhost:8000
+    Pragma: no-cache
+    X-Debug-Token: 19c8e0
+    X-Debug-Token-Link: /_profiler/19c8e0
+    X-Powered-By: PHP/7.0.4
+
+    {
+        "access_token": "ZGJmNTA2MDdmYTdmNWFiZjcxOWY3MWYyYzkyZDdlNWIzOTU4NWY3NTU1MDFjOTdhMTk2MGI3YjY1ZmI2NzM5MA",
+        "expires_in": 5184000,
+        "refresh_token": "OTNlZGE5OTJjNWQwYzc2NDI5ZGE5MDg3ZTNjNmNkYTY0ZWZhZDVhNDBkZTc1ZTNiMmQ0MjQ0OThlNTFjNTQyMQ",
+        "scope": null,
+        "token_type": "bearer"
+    }
+
+We'll work with the ``access_token`` value in our next calls.
+
+cURL example:
+
+::
+
+    curl -s "https://localhost:8000/oauth/v2/token?grant_type=client_credentials&client_id=1_3o53gl30vhgk0c8ks4cocww08o84448osgo40wgw4gwkoo8skc&client_secret=636ocbqo978ckw0gsw4gcwwocg8044sco0w8w84cws48ggogs4"
+
+
+
 Third party resources
----------------
+---------------------
 
 Some applications or libraries use our API. Here is a non-exhaustive list of them:
 
