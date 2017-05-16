@@ -209,16 +209,18 @@ class ContentProxyTest extends \PHPUnit_Framework_TestCase
         $tagger->expects($this->once())
             ->method('tag');
 
-        $graby = $this->getMockBuilder('Graby\Graby')->getMock();
-
-        $proxy = new ContentProxy($graby, $tagger, $this->getTagRepositoryMock(), $this->getLogger(), $this->fetchingErrorMessage);
-        $entry = $proxy->updateEntry(new Entry(new User()), 'http://0.0.0.0', [
-            'html' => str_repeat('this is my content', 325),
-            'title' => 'this is my title',
-            'url' => 'http://1.1.1.1',
-            'content_type' => 'text/html',
-            'language' => 'fr',
-        ]);
+        $proxy = new ContentProxy((new Graby()), $tagger, $this->getTagRepositoryMock(), $this->getLogger(), $this->fetchingErrorMessage);
+        $entry = $proxy->updateEntry(
+            new Entry(new User()),
+            'http://0.0.0.0',
+            [
+                'html' => str_repeat('this is my content', 325),
+                'title' => 'this is my title',
+                'url' => 'http://1.1.1.1',
+                'content_type' => 'text/html',
+                'language' => 'fr',
+            ]
+        );
 
         $this->assertEquals('http://1.1.1.1', $entry->getUrl());
         $this->assertEquals('this is my title', $entry->getTitle());
@@ -390,9 +392,7 @@ class ContentProxyTest extends \PHPUnit_Framework_TestCase
         $tagger->expects($this->once())
             ->method('tag');
 
-        $graby = new Graby();
-
-        $proxy = new ContentProxy($graby, $tagger, $this->getTagRepositoryMock(), $this->getLogger(), $this->fetchingErrorMessage);
+        $proxy = new ContentProxy((new Graby()), $tagger, $this->getTagRepositoryMock(), $this->getLogger(), $this->fetchingErrorMessage);
         $entry = $proxy->updateEntry(
             new Entry(new User()),
             'http://1.1.1.1',

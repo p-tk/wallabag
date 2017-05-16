@@ -61,7 +61,6 @@
         "wallabag/tcpdf": "^6.2",
         "simplepie/simplepie": "~1.3.1",
         "willdurand/hateoas-bundle": "~1.0",
-        "htmlawed/htmlawed": "~1.1.19",
         "liip/theme-bundle": "~1.1",
         "lexik/form-filter-bundle": "~5.0",
         "j0k3r/graby": "dev-extractor",
@@ -84,8 +83,7 @@
         "javibravo/simpleue": "^1.0",
         "symfony/dom-crawler": "^3.1",
         "friendsofsymfony/jsrouting-bundle": "^1.6",
-        "bdunogier/guzzle-site-authenticator": "dev-master",
-        "htmlawed/htmlawed": "^1.1.19"
+        "bdunogier/guzzle-site-authenticator": "dev-master"
     },
     "require-dev": {
         "doctrine/doctrine-fixtures-bundle": "~2.2",
