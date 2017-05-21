@@ -1,3 +1,7 @@
+# Ignore vim temp files
+*.swp
+*.swo
+
 # Cache, logs & sessions
 /var/*
 !/var/cache
